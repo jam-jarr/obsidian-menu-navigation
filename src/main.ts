@@ -29,7 +29,7 @@ function dispatchArrowKey(key: "ArrowDown" | "ArrowUp"): void {
 	window.dispatchEvent(evt);
 }
 
-export default class EmacsNavigationPlugin extends Plugin {
+export default class VimEmacsNavigationPlugin extends Plugin {
 	async onload() {
 		// Use capture phase: built-in modals frequently stop propagation.
 		this.registerDomEvent(
