@@ -19,21 +19,12 @@ function getActiveSuggestionContainer(): HTMLElement | null {
 
 function dispatchArrowKey(key: "ArrowDown" | "ArrowUp"): void {
 	const code = key;
-	const keyCode = key === "ArrowDown" ? 40 : 38;
 	const evt = new KeyboardEvent("keydown", {
 		key,
 		code,
 		bubbles: true,
 		cancelable: true,
 	});
-
-	// Best-effort: some handlers still check keyCode/which.
-	try {
-		Object.defineProperty(evt, "keyCode", { get: () => keyCode });
-		Object.defineProperty(evt, "which", { get: () => keyCode });
-	} catch {
-		// ignore
-	}
 
 	window.dispatchEvent(evt);
 }
@@ -74,6 +65,7 @@ export default class EmacsNavigationPlugin extends Plugin {
 					return;
 				}
 			},
+			// needed to capture modal events
 			{ capture: true },
 		);
 	}
