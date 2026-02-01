@@ -1,50 +1,80 @@
-import { Plugin } from 'obsidian';
+import { Plugin } from "obsidian";
+
+function isVisible(el: HTMLElement): boolean {
+	if (!el.isConnected) return false;
+	const style = window.getComputedStyle(el);
+	if (style.display === "none") return false;
+	if (style.visibility === "hidden") return false;
+	if (Number(style.opacity) === 0) return false;
+	const rect = el.getBoundingClientRect();
+	return rect.width > 0 && rect.height > 0;
+}
+
+function getActiveSuggestionContainer(): HTMLElement | null {
+	const containers = Array.from(
+		document.querySelectorAll<HTMLElement>(".prompt"),
+	);
+	return containers.find(isVisible) ?? null;
+}
+
+function dispatchArrowKey(key: "ArrowDown" | "ArrowUp"): void {
+	const code = key;
+	const keyCode = key === "ArrowDown" ? 40 : 38;
+	const evt = new KeyboardEvent("keydown", {
+		key,
+		code,
+		bubbles: true,
+		cancelable: true,
+	});
+
+	// Best-effort: some handlers still check keyCode/which.
+	try {
+		Object.defineProperty(evt, "keyCode", { get: () => keyCode });
+		Object.defineProperty(evt, "which", { get: () => keyCode });
+	} catch {
+		// ignore
+	}
+
+	window.dispatchEvent(evt);
+}
 
 export default class EmacsNavigationPlugin extends Plugin {
 	async onload() {
-		// Register a global keydown event listener
-		this.registerDomEvent(document, 'keydown', (evt: KeyboardEvent) => {
-			// Check if Ctrl (or Cmd on Mac) is pressed along with N or P
-			const isCtrl = evt.ctrlKey || evt.metaKey; // Support Cmd+N/P on Mac if desired
+		// Use capture phase: built-in modals frequently stop propagation.
+		this.registerDomEvent(
+			window,
+			"keydown",
+			(evt: KeyboardEvent) => {
+				if (!evt.ctrlKey) return;
+				if (evt.altKey || evt.metaKey || evt.shiftKey) return;
 
-			if (!isCtrl) return;
-			if (evt.key !== 'n' && evt.key !== 'p') return;
-			// Check if a suggestion modal is open
-			// The '.suggestion-container' class is present in Command Palette, Quick Switcher, etc.
-			const suggestionContainer = document.querySelector('.suggestion-container');
+				const downKeys = ['n', 'j'];
+				const upKeys = ['p', 'k'];
 
-			// If the container doesn't exist or isn't visible, do nothing (let default behavior happen)
-			if (!suggestionContainer || !suggestionContainer.isConnected) {
-				return;
-			}
+				const container = getActiveSuggestionContainer();
+				if (!container) return;
 
-			// Prevent the default action (e.g., creating a new note)
-			evt.preventDefault();
-			evt.stopPropagation();
+				const key = evt.key.toLowerCase();
 
-			// Determine which key to simulate
-			const keyToSimulate = evt.key === 'n' ? 'ArrowDown' : 'ArrowUp';
-
-			console.log(keyToSimulate);
-
-			// Create a synthetic keyboard event
-			const arrowEvent = new KeyboardEvent('keydown', {
-				key: keyToSimulate,
-				code: keyToSimulate,
-				bubbles: true,
-				cancelable: true,
-				ctrlKey: false,
-				metaKey: false,
-				shiftKey: false,
-				altKey: false
-			});
-
-			// Dispatch the event to the currently focused element (usually the input box of the modal)
-			document.activeElement?.dispatchEvent(arrowEvent);
-		});
-	}
-
-	onunload() {
-		// cleanup is handled automatically by registerDomEvent
+				if (upKeys.contains(key)) {
+					evt.preventDefault();
+					evt.stopPropagation();
+					if (typeof evt.stopImmediatePropagation === "function") {
+						evt.stopImmediatePropagation();
+					}
+					dispatchArrowKey("ArrowUp");
+				} else if (downKeys.contains(key)) {
+					evt.preventDefault();
+					evt.stopPropagation();
+					if (typeof evt.stopImmediatePropagation === "function") {
+						evt.stopImmediatePropagation();
+					}
+					dispatchArrowKey("ArrowDown");
+				} else {
+					return;
+				}
+			},
+			{ capture: true },
+		);
 	}
 }
