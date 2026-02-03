@@ -1,7 +1,7 @@
 {
 	"id": "vimlike-modal-navigation",
 	"name": "Vim-like Modal Navigation",
-	"version": "0.1.3",
+	"version": "0.1.5",
 	"minAppVersion": "1.11.5",
 	"description": "Navigate modal options using vim/emacs style bindings.",
 	"author": "Jamie Giarratana",
